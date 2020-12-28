@@ -1,29 +1,22 @@
 package main
 
 import (
+	"context"
+	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 	"text/template"
 	"time"
-
-	// "encoding/csv"
-	"fmt"
-	//"github.com/go-resty/resty/v2"
-	"context"
-	"strings"
 
 	cli "github.com/jawher/mow.cli"
 	dataframe "github.com/rocketlaunchr/dataframe-go"
 	"github.com/rocketlaunchr/dataframe-go/imports"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
-
-	//"io"
-	"io/ioutil"
-	"log"
-	"os"
-	//"strconv"
-	//"time"
 )
 
 // Config holder for cli configs
@@ -137,6 +130,17 @@ func loadDataFrame(csvStr string) (df *dataframe.DataFrame) {
 	return df
 }
 
+func convertToTime(in interface{}) (interface{}, error) {
+	return time.Parse(timeFormat, in.(string))
+}
+
+func convertToInt64(in interface{}) (interface{}, error) {
+	if in == nil || in.(string) == "" {
+		return nil, nil
+	}
+	return strconv.ParseInt(in.(string), 10, 64)
+}
+
 func logDataframe(df *dataframe.DataFrame) {
 
 	iterator := df.ValuesIterator(dataframe.ValuesOptions{0, 1, true})
@@ -174,7 +178,6 @@ Dimessi: 		{{LocaleIntFmt .dimessi_guariti}}
 Totale tamponi: 	{{LocaleIntFmt .tamponi}}
 Totale testati: 	{{LocaleIntFmt .casi_testati}}
 `
-
 	p := message.NewPrinter(language.Italian)
 	tmpl := template.Must(
 		template.New("").Funcs(template.FuncMap{
@@ -189,15 +192,4 @@ Totale testati: 	{{LocaleIntFmt .casi_testati}}
 	if err := tmpl.Execute(os.Stdout, lastRow); err != nil {
 		fmt.Println(err)
 	}
-}
-
-func convertToTime(in interface{}) (interface{}, error) {
-	return time.Parse(timeFormat, in.(string))
-}
-
-func convertToInt64(in interface{}) (interface{}, error) {
-	if in == nil || in.(string) == "" {
-		return nil, nil
-	}
-	return strconv.ParseInt(in.(string), 10, 64)
 }
