@@ -57,7 +57,7 @@ Available regions: Abruzzo, Basilicata, Calabria, Campania, Emilia-
 		cfg Config
 	)
 
-	app.Version("v version", "gocovid 0.0.1")
+	app.Version("v version", "covid19 0.0.1")
 	app.Spec = "[-t] [-r]"
 
 	app.BoolOptPtr(&cfg.Rt, "t rt", false, "Estimate Rt")
@@ -157,26 +157,31 @@ func logDataframe(df *dataframe.DataFrame) {
 }
 
 func printSummary(df *dataframe.DataFrame) {
-	lastRow := df.Row(df.NRows()-1, false, dataframe.SeriesName)
+	nrows := df.NRows()
+	lastRow := df.Row(nrows-1, false, dataframe.SeriesName)
+	secondLastRow := df.Row(nrows-2, false, dataframe.SeriesName)
+	last2days := map[string]interface{}{
+		"today":     lastRow,
+		"yesterday": secondLastRow,
+	}
 	// debug: REMOVE
 	log.Println(df.Names())
 
 	tmplStr := `
-Aggiornamento: {{LocaleTimeFmt .data}}
-----------------------------------------------------------------------
+Aggiornamento: {{LocaleTimeFmt .today.data}} 		Oggi 			Ieri 	   	  Differenza (%)
+-------------------------------------------------------------------------------------------------------
 
-Totale casi: 		{{LocaleIntFmt .totale_casi}}
-Nuovi casi: 		{{LocaleIntFmt .nuovi_positivi}}
-Totale positivi: 	{{LocaleIntFmt .totale_positivi}}
-Variazione positivi: 	{{ LocaleIntFmt .variazione_totale_positivi }}
-Totale decessi: 	{{LocaleIntFmt .deceduti}}
-Variazione decessi: 	TBD{{/*LocaleIntFmt .nuovi_decessi */}}
-Terapia intensiva: 	{{LocaleIntFmt .terapia_intensiva}}
-Ingressi in intensiva: 	{{LocaleIntFmt .ingressi_terapia_intensiva}}
-Ospedalizzati: 		{{LocaleIntFmt .totale_ospedalizzati}}
-Dimessi: 		{{LocaleIntFmt .dimessi_guariti}}
-Totale tamponi: 	{{LocaleIntFmt .tamponi}}
-Totale testati: 	{{LocaleIntFmt .casi_testati}}
+Totale casi: 		{{LocaleIntFmt .today.totale_casi}}	{{LocaleIntFmt .yesterday.totale_casi}}	{{sub .today.totale_casi .yesterday.totale_casi}}
+Nuovi casi: 		{{LocaleIntFmt .today.nuovi_positivi}} 	{{LocaleIntFmt .yesterday.nuovi_positivi}}	{{sub .today.nuovi_positivi .yesterday.nuovi_positivi}}
+Totale positivi: 	{{LocaleIntFmt .today.totale_positivi}} 	{{LocaleIntFmt .yesterday.totale_positivi}}	{{sub .today.totale_positivi .yesterday.totale_positivi}}
+Variazione positivi: 	{{ LocaleIntFmt .today.variazione_totale_positivi }} 	{{ LocaleIntFmt .yesterday.variazione_totale_positivi }}	{{sub .today.variazione_totale_positivi .yesterday.variazione_totale_positivi}}
+Totale decessi: 	{{LocaleIntFmt .today.deceduti}} 	{{LocaleIntFmt .yesterday.deceduti}}	{{sub .today.deceduti .yesterday.deceduti}}
+Terapia intensiva: 	{{LocaleIntFmt .today.terapia_intensiva}} 	{{LocaleIntFmt .yesterday.terapia_intensiva}}	{{sub .today.terapia_intensiva .yesterday.terapia_intensiva}}
+Ingressi in intensiva: 	{{LocaleIntFmt .today.ingressi_terapia_intensiva}} 	{{LocaleIntFmt .yesterday.ingressi_terapia_intensiva}}	{{sub .today.ingressi_terapia_intensiva .yesterday.ingressi_terapia_intensiva}}
+Ospedalizzati: 		{{LocaleIntFmt .today.totale_ospedalizzati}} 	{{LocaleIntFmt .yesterday.totale_ospedalizzati}}	{{sub .today.totale_ospedalizzati .yesterday.totale_ospedalizzati}}
+Dimessi: 		{{LocaleIntFmt .today.dimessi_guariti}} 	{{LocaleIntFmt .yesterday.dimessi_guariti}}	{{sub .today.dimessi_guariti .yesterday.dimessi_guariti}}
+Totale tamponi: 	{{LocaleIntFmt .today.tamponi}} 	{{LocaleIntFmt .yesterday.tamponi}}	{{sub .today.tamponi .yesterday.tamponi}}
+Totale testati: 	{{LocaleIntFmt .today.casi_testati}} 	{{LocaleIntFmt .yesterday.casi_testati}}	{{sub .today.casi_testati .yesterday.casi_testati}}
 `
 	p := message.NewPrinter(language.Italian)
 	tmpl := template.Must(
@@ -187,9 +192,14 @@ Totale testati: 	{{LocaleIntFmt .casi_testati}}
 			"LocaleTimeFmt": func(val time.Time) string {
 				return val.Format("02/01/2006")
 			},
+			"sub": func(a, b int64) string {
+				variation := a - b
+				pctVariation := float64(a-b) / float64(a) * 100
+				return p.Sprintf("%20.0d", variation) + p.Sprintf(" ( %6.2f%%)", pctVariation)
+			},
 		}).Parse(tmplStr))
 
-	if err := tmpl.Execute(os.Stdout, lastRow); err != nil {
+	if err := tmpl.Execute(os.Stdout, last2days); err != nil {
 		fmt.Println(err)
 	}
 }
