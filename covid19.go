@@ -58,10 +58,11 @@ Available regions: Abruzzo, Basilicata, Calabria, Campania, Emilia-
 	)
 
 	app.Version("v version", "covid19 0.0.1")
-	app.Spec = "[-t] [-r]"
+	//TODO regional data and rt estimation
+	//app.Spec = "[-t] [-r]"
 
-	app.BoolOptPtr(&cfg.Rt, "t rt", false, "Estimate Rt")
-	app.StringOptPtr(&cfg.Region, "r region", "", "Specify a region")
+	//app.BoolOptPtr(&cfg.Rt, "t rt", false, "Estimate Rt")
+	//app.StringOptPtr(&cfg.Region, "r region", "", "Specify a region")
 
 	app.Action = func() {
 		mainAction(&cfg)
@@ -72,7 +73,7 @@ Available regions: Abruzzo, Basilicata, Calabria, Campania, Emilia-
 
 func mainAction(cfg *Config) {
 
-	fmt.Println("Covid19 data analysis")
+	fmt.Println("Covid19 - dati sintetici")
 	csv := getData(ItalyDataURL)
 	df := loadDataFrame(csv)
 	printSummary(df)
