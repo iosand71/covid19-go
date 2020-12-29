@@ -193,7 +193,7 @@ Totale testati: 	{{LocaleIntFmt .today.casi_testati}} 	{{LocaleIntFmt .yesterday
 			},
 			"sub": func(a, b int64) string {
 				variation := a - b
-				pctVariation := float64(a-b) / float64(a) * 100
+				pctVariation := float64(a-b) / float64(b) * 100
 				return p.Sprintf("%20.0d", variation) + p.Sprintf(" ( %6.2f%%)", pctVariation)
 			},
 		}).Parse(tmplStr))
@@ -206,24 +206,46 @@ Totale testati: 	{{LocaleIntFmt .today.casi_testati}} 	{{LocaleIntFmt .yesterday
 func printPercentages(df *dataframe.DataFrame) {
 	nrows := df.NRows()
 	lastRow := df.Row(nrows-1, false, dataframe.SeriesName)
+	secondLastRow := df.Row(nrows-2, false, dataframe.SeriesName)
 
-	stats := map[string]float64{
-		"mortality":     100 * float64(lastRow["deceduti"].(int64)) / float64(lastRow["totale_casi"].(int64)),
-		"intensiveCare": 100 * float64(lastRow["terapia_intensiva"].(int64)) / float64(lastRow["totale_casi"].(int64)),
-		"hospitalized":  100 * float64(lastRow["totale_ospedalizzati"].(int64)) / float64(lastRow["totale_casi"].(int64)),
-		"recovered":     100 * float64(lastRow["dimessi_guariti"].(int64)) / float64(lastRow["totale_casi"].(int64)),
+	calcPct := func(row map[interface{}]interface{}, field string) float64 {
+		return 100 * float64(lastRow[field].(int64)) / float64(row["totale_casi"].(int64))
+	}
+
+	today := map[string]float64{
+		"mortality":     calcPct(lastRow, "deceduti"),
+		"intensiveCare": calcPct(lastRow, "terapia_intensiva"),
+		"hospitalized":  calcPct(lastRow, "totale_ospedalizzati"),
+		"recovered":     calcPct(lastRow, "dimessi_guariti"),
+	}
+	yesterday := map[string]float64{
+		"mortality":     calcPct(secondLastRow, "deceduti"),
+		"intensiveCare": calcPct(secondLastRow, "terapia_intensiva"),
+		"hospitalized":  calcPct(secondLastRow, "totale_ospedalizzati"),
+		"recovered":     calcPct(secondLastRow, "dimessi_guariti"),
+	}
+
+	last2days := map[string]interface{}{
+		"today":     today,
+		"yesterday": yesterday,
 	}
 
 	tmplStr := `
 
-Mortalita: 		{{printf "%19.2f" .mortality}}%
-Terapia intensiva: 	{{printf "%19.2f" .intensiveCare}}%
-Ricoverati: 		{{printf "%19.2f" .hospitalized}}%
-Guariti: 		{{printf "%19.2f" .recovered}}%
+Mortalita: 		{{printf "%19.2f" .today.mortality}}% 	{{printf "%19.2f" .yesterday.mortality}}% 	{{sub .today.mortality .yesterday.mortality}}
+Terapia intensiva: 	{{printf "%19.2f" .today.intensiveCare}}% 	{{printf "%19.2f" .yesterday.intensiveCare}}% 	{{sub .today.intensiveCare .yesterday.intensiveCare}}
+Ricoverati: 		{{printf "%19.2f" .today.hospitalized}}% 	{{printf "%19.2f" .yesterday.hospitalized}}% 	{{sub .today.hospitalized .yesterday.hospitalized}}
+Guariti: 		{{printf "%19.2f" .today.recovered}}% 	{{printf "%19.2f" .yesterday.recovered}}% 	{{sub .today.recovered .yesterday.recovered}}
 `
-	tmpl := template.Must(template.New("").Parse(tmplStr))
+	tmpl := template.Must(template.New("").Funcs(template.FuncMap{
+		"sub": func(a, b float64) string {
+			variation := a - b
+			pctVariation := (a - b) / b * 100
+			return fmt.Sprintf("%19.2f%%", variation) + fmt.Sprintf(" ( %6.2f%%)", pctVariation)
+		},
+	}).Parse(tmplStr))
 
-	if err := tmpl.Execute(os.Stdout, stats); err != nil {
+	if err := tmpl.Execute(os.Stdout, last2days); err != nil {
 		fmt.Println(err)
 	}
 
