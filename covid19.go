@@ -76,6 +76,7 @@ func mainAction(cfg *Config) {
 	csv := getData(ItalyDataURL)
 	df := loadDataFrame(csv)
 	printSummary(df)
+	printPercentages(df)
 }
 
 func getData(URL string) string {
@@ -164,8 +165,6 @@ func printSummary(df *dataframe.DataFrame) {
 		"today":     lastRow,
 		"yesterday": secondLastRow,
 	}
-	// debug: REMOVE
-	log.Println(df.Names())
 
 	tmplStr := `
 Aggiornamento: {{LocaleTimeFmt .today.data}} 		Oggi 			Ieri 	   	  Differenza (%)
@@ -202,4 +201,30 @@ Totale testati: 	{{LocaleIntFmt .today.casi_testati}} 	{{LocaleIntFmt .yesterday
 	if err := tmpl.Execute(os.Stdout, last2days); err != nil {
 		fmt.Println(err)
 	}
+}
+
+func printPercentages(df *dataframe.DataFrame) {
+	nrows := df.NRows()
+	lastRow := df.Row(nrows-1, false, dataframe.SeriesName)
+
+	stats := map[string]float64{
+		"mortality":     100 * float64(lastRow["deceduti"].(int64)) / float64(lastRow["totale_casi"].(int64)),
+		"intensiveCare": 100 * float64(lastRow["terapia_intensiva"].(int64)) / float64(lastRow["totale_casi"].(int64)),
+		"hospitalized":  100 * float64(lastRow["totale_ospedalizzati"].(int64)) / float64(lastRow["totale_casi"].(int64)),
+		"recovered":     100 * float64(lastRow["dimessi_guariti"].(int64)) / float64(lastRow["totale_casi"].(int64)),
+	}
+
+	tmplStr := `
+
+Mortalita: 		{{printf "%19.2f" .mortality}}%
+Terapia intensiva: 	{{printf "%19.2f" .intensiveCare}}%
+Ricoverati: 		{{printf "%19.2f" .hospitalized}}%
+Guariti: 		{{printf "%19.2f" .recovered}}%
+`
+	tmpl := template.Must(template.New("").Parse(tmplStr))
+
+	if err := tmpl.Execute(os.Stdout, stats); err != nil {
+		fmt.Println(err)
+	}
+
 }
