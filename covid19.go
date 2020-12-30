@@ -17,7 +17,8 @@ import (
 
 // Config holder for cli configs
 type Config struct {
-	Region string
+	Region       string
+	printRegions bool
 }
 
 // ItalyDataURL CSV data at national level
@@ -34,32 +35,23 @@ const GlobalDataURL = "https://data.humdata.org/hxlproxy/api/data-preview.csv?ur
 
 const timeFormat = "2006-01-02T15:04:05"
 
-var cols = [...]string{"date", "ricoverati_con_sintomi", "totale_casi", "totale_positivi", "nuovi_positivi",
-	"variazione_totale_positivi", "deceduti", "nuovi_decessi", "terapia_intensiva", "totale_ospedalizzati", "dimessi_guariti", "isolamento_domiciliare",
-	"casi_da_sospetto_diagnostico", "casi_da_screening", "tamponi", "casi_testati"}
-
 func main() {
 	// here main
 	log.SetFlags(0)
 	log.SetOutput(ioutil.Discard)
 
 	var (
-		app = cli.App("covid19", `
-Daily stats for covid19 in Italy.
-
-Available regions: Abruzzo, Basilicata, Calabria, Campania, Emilia-
-  Romagna, 'Friuli Venezia Giulia', Lazio, Liguria, Lombardia, Marche,
-  Molise, 'P.A. Bolzano', 'P.A. Trento', Piemonte, Puglia, Sardegna,
-  Sicilia, Toscana, Umbria, "Valle d'Aosta", Veneto.`)
+		app = cli.App("covid19", "Daily stats for covid19 in Italy.")
 		cfg Config
 	)
 
 	app.Version("v version", "covid19 0.0.1")
 	//TODO provincial data
 	//TODO international data
-	app.Spec = "[-r]"
+	app.Spec = "[-r [-a]]"
 
 	app.StringOptPtr(&cfg.Region, "r region", "", "Specify a region")
+	app.BoolOptPtr(&cfg.printRegions, "a availables", false, "Print available regions")
 
 	app.Action = func() {
 		mainAction(&cfg)
@@ -70,6 +62,7 @@ Available regions: Abruzzo, Basilicata, Calabria, Campania, Emilia-
 
 func mainAction(cfg *Config) {
 	fmt.Println("Covid19 - dati sintetici")
+	fmt.Println()
 
 	var csv string
 	if cfg.Region != "" {
@@ -80,7 +73,11 @@ func mainAction(cfg *Config) {
 	}
 
 	df := loadDataFrame(csv)
+
 	if cfg.Region != "" {
+		if cfg.printRegions == true {
+			printAvailableRegions(df)
+		}
 		filterByRegion(df, cfg.Region)
 	}
 
@@ -98,6 +95,26 @@ func filterByRegion(df *dataframe.DataFrame, region string) {
 			return dataframe.KEEP, nil
 		})
 	dataframe.Filter(ctx, df, filterFn, dataframe.FilterOptions{InPlace: true})
+}
+
+func printAvailableRegions(df *dataframe.DataFrame) {
+	var denominazione_regione = 3
+	iter := df.Series[denominazione_regione].ValuesIterator()
+	set := make(map[string]bool)
+
+	fmt.Println("\navailable regions:")
+	for {
+		row, vals, _ := iter()
+		if row == nil {
+			break
+		}
+		set[vals.(string)] = true
+	}
+
+	for key, _ := range set {
+		fmt.Printf("%v, ", key)
+	}
+	fmt.Println()
 }
 
 func printSummary(df *dataframe.DataFrame) {
