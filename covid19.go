@@ -5,23 +5,18 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
-	"strconv"
-	"strings"
 	"text/template"
 	"time"
 
 	cli "github.com/jawher/mow.cli"
 	dataframe "github.com/rocketlaunchr/dataframe-go"
-	"github.com/rocketlaunchr/dataframe-go/imports"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
 
 // Config holder for cli configs
 type Config struct {
-	Rt     bool
 	Region string
 }
 
@@ -39,7 +34,9 @@ const GlobalDataURL = "https://data.humdata.org/hxlproxy/api/data-preview.csv?ur
 
 const timeFormat = "2006-01-02T15:04:05"
 
-var cols = [...]string{"date", "ricoverati_con_sintomi", "totale_casi", "totale_positivi", "nuovi_positivi", "variazione_totale_positivi", "deceduti", "nuovi_decessi", "terapia_intensiva", "totale_ospedalizzati", "dimessi_guariti", "isolamento_domiciliare", "casi_da_sospetto_diagnostico", "casi_da_screening", "tamponi", "casi_testati"}
+var cols = [...]string{"date", "ricoverati_con_sintomi", "totale_casi", "totale_positivi", "nuovi_positivi",
+	"variazione_totale_positivi", "deceduti", "nuovi_decessi", "terapia_intensiva", "totale_ospedalizzati", "dimessi_guariti", "isolamento_domiciliare",
+	"casi_da_sospetto_diagnostico", "casi_da_screening", "tamponi", "casi_testati"}
 
 func main() {
 	// here main
@@ -58,11 +55,11 @@ Available regions: Abruzzo, Basilicata, Calabria, Campania, Emilia-
 	)
 
 	app.Version("v version", "covid19 0.0.1")
-	//TODO regional data and rt estimation
-	//app.Spec = "[-t] [-r]"
+	//TODO provincial data
+	//TODO international data
+	app.Spec = "[-r]"
 
-	//app.BoolOptPtr(&cfg.Rt, "t rt", false, "Estimate Rt")
-	//app.StringOptPtr(&cfg.Region, "r region", "", "Specify a region")
+	app.StringOptPtr(&cfg.Region, "r region", "", "Specify a region")
 
 	app.Action = func() {
 		mainAction(&cfg)
@@ -72,90 +69,35 @@ Available regions: Abruzzo, Basilicata, Calabria, Campania, Emilia-
 }
 
 func mainAction(cfg *Config) {
-
 	fmt.Println("Covid19 - dati sintetici")
-	csv := getData(ItalyDataURL)
+
+	var csv string
+	if cfg.Region != "" {
+		csv = getData(RegionsDataURL)
+		fmt.Printf("regione selezionata: %v\n", cfg.Region)
+	} else {
+		csv = getData(ItalyDataURL)
+	}
+
 	df := loadDataFrame(csv)
+	if cfg.Region != "" {
+		filterByRegion(df, cfg.Region)
+	}
+
 	printSummary(df)
 	printPercentages(df)
 }
 
-func getData(URL string) string {
-	var bodyString string
-	resp, err := http.Get(URL)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusOK {
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-		bodyString = string(bodyBytes)
-	}
-
-	return bodyString
-}
-
-func loadDataFrame(csvStr string) (df *dataframe.DataFrame) {
+func filterByRegion(df *dataframe.DataFrame, region string) {
 	var ctx = context.Background()
-
-	opts := imports.CSVLoadOptions{
-		InferDataTypes: true,
-		NilValue:       &[]string{"NA"}[0],
-		DictateDataType: map[string]interface{}{
-			"data": imports.Converter{
-				ConcreteType:  time.Time{},
-				ConverterFunc: convertToTime,
-			},
-			"ingressi_terapia_intensiva": imports.Converter{
-				ConcreteType:  int64(0),
-				ConverterFunc: convertToInt64,
-			},
-			"casi_testati": imports.Converter{
-				ConcreteType:  int64(0),
-				ConverterFunc: convertToInt64,
-			},
-		},
-	}
-	df, err := imports.LoadFromCSV(ctx, strings.NewReader(csvStr), opts)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	logDataframe(df)
-
-	return df
-}
-
-func convertToTime(in interface{}) (interface{}, error) {
-	return time.Parse(timeFormat, in.(string))
-}
-
-func convertToInt64(in interface{}) (interface{}, error) {
-	if in == nil || in.(string) == "" {
-		return nil, nil
-	}
-	return strconv.ParseInt(in.(string), 10, 64)
-}
-
-func logDataframe(df *dataframe.DataFrame) {
-
-	iterator := df.ValuesIterator(dataframe.ValuesOptions{0, 1, true})
-
-	df.Lock()
-	for {
-		row, vals, _ := iterator()
-		if row == nil {
-			break
-		}
-		log.Println(*row, vals)
-	}
-	df.Unlock()
+	filterFn := dataframe.FilterDataFrameFn(
+		func(vals map[interface{}]interface{}, row, nRows int) (dataframe.FilterAction, error) {
+			if vals["denominazione_regione"] != region {
+				return dataframe.DROP, nil
+			}
+			return dataframe.KEEP, nil
+		})
+	dataframe.Filter(ctx, df, filterFn, dataframe.FilterOptions{InPlace: true})
 }
 
 func printSummary(df *dataframe.DataFrame) {
@@ -233,7 +175,7 @@ func printPercentages(df *dataframe.DataFrame) {
 
 	tmplStr := `
 
-Mortalita: 		{{printf "%19.2f" .today.mortality}}% 	{{printf "%19.2f" .yesterday.mortality}}% 	{{sub .today.mortality .yesterday.mortality}}
+Mortalitá: 		{{printf "%19.2f" .today.mortality}}% 	{{printf "%19.2f" .yesterday.mortality}}% 	{{sub .today.mortality .yesterday.mortality}}
 Terapia intensiva: 	{{printf "%19.2f" .today.intensiveCare}}% 	{{printf "%19.2f" .yesterday.intensiveCare}}% 	{{sub .today.intensiveCare .yesterday.intensiveCare}}
 Ricoverati: 		{{printf "%19.2f" .today.hospitalized}}% 	{{printf "%19.2f" .yesterday.hospitalized}}% 	{{sub .today.hospitalized .yesterday.hospitalized}}
 Guariti: 		{{printf "%19.2f" .today.recovered}}% 	{{printf "%19.2f" .yesterday.recovered}}% 	{{sub .today.recovered .yesterday.recovered}}
