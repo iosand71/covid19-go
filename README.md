@@ -2,6 +2,11 @@
 
 Esercizio di sviluppo con Go
 
+## Installazione
+
+- go build
+- go install
+
 ## Riga di comando
 
 ```
