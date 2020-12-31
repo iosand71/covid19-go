@@ -4,14 +4,17 @@ Esercizio di sviluppo con Go
 
 ## Installazione
 
-- go build
-- go install
+- `go build`
+- `go install`
 
 ## Cross compilazione
 
-- MacOs: env GOOS=darwin GOARCH=amd64 go build
-- Linux: env GOOS=linux GOARCH=amd64 go build
-- Windows: env GOOS=windows GOARCH=amd64 go build
+É molto semplice produrre binari per altri os/architetture: é sufficiente impostare
+due variabili di ambiente, ad ex:
+
+- **MacOS**: `env GOOS=darwin GOARCH=amd64 go build`
+- **Linux**: `env GOOS=linux GOARCH=amd64 go build`
+- **Windows**: `env GOOS=windows GOARCH=amd64 go build`
 
 ## Riga di comando
 
