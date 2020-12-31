@@ -6,14 +6,41 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"time"
 
 	cli "github.com/jawher/mow.cli"
 	dataframe "github.com/rocketlaunchr/dataframe-go"
 )
 
+// DateTime alias
+type DateTime time.Time
+
+const timeFormat = "2006-01-02T15:04:05"
+const dateFormat = "2006-01-02"
+
+func (d *DateTime) Set(v string) error {
+	parsed, err := time.Parse(dateFormat, v)
+	if err != nil {
+		return err
+	}
+	*d = DateTime(parsed)
+	return nil
+}
+
+func (d *DateTime) isZero() bool {
+	date := time.Time(*d)
+	return date.IsZero()
+}
+
+func (d *DateTime) String() string {
+	date := time.Time(*d)
+	return date.Format(dateFormat)
+}
+
 // Config holder for cli configs
 type Config struct {
 	Region       string
+	startDate    DateTime
 	printRegions bool
 	debug        bool
 }
@@ -24,32 +51,30 @@ const ItalyDataURL = "https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/
 // RegionsDataURL CSV data at regional level
 const RegionsDataURL = "https://github.com/pcm-dpc/COVID-19/raw/master/dati-regioni/dpc-covid19-ita-regioni.csv"
 
-const timeFormat = "2006-01-02T15:04:05"
+var cfg Config
 
 func main() {
 	// here main
 	log.SetFlags(0)
 	log.SetOutput(ioutil.Discard)
 
-	var (
-		app = cli.App("covid19", "Daily stats for covid19 in Italy.")
-		cfg Config
-	)
+	app := cli.App("covid19", "Daily stats for covid19 in Italy.")
 
 	app.Version("v version", "covid19 0.0.1")
-	app.Spec = "[-r [-a]]"
+	app.Spec = "[-r [-a]] [-d]"
 
 	app.StringOptPtr(&cfg.Region, "r region", "", "Specify a region")
 	app.BoolOptPtr(&cfg.printRegions, "a availables", false, "Print available regions")
+	app.VarOpt("d date", &cfg.startDate, "Date in yyyy-mm-dd format")
 
 	app.Action = func() {
-		mainAction(&cfg)
+		mainAction()
 	}
 
 	app.Run(os.Args)
 }
 
-func mainAction(cfg *Config) {
+func mainAction() {
 	fmt.Println("Covid19 - dati sintetici")
 	fmt.Println()
 

@@ -1,18 +1,20 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"text/template"
 	"time"
 
 	dataframe "github.com/rocketlaunchr/dataframe-go"
+	"github.com/rocketlaunchr/dataframe-go/utils"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
 
 func printAvailableRegions(df *dataframe.DataFrame) {
-	var denominazione_regione = 3
+	var denominazione_regione = df.MustNameToColumn("denominazione_regione")
 	iter := df.Series[denominazione_regione].ValuesIterator()
 	set := make(map[string]bool)
 
@@ -31,17 +33,38 @@ func printAvailableRegions(df *dataframe.DataFrame) {
 	fmt.Println()
 }
 
+func getLast2Days(df *dataframe.DataFrame) (map[interface{}]interface{}, map[interface{}]interface{}) {
+	ctx := context.Background()
+
+	nrows := df.NRows() - 1
+	dateColumn := df.MustNameToColumn("data")
+	startDate := time.Time(cfg.startDate)
+	maxResults := 1
+
+	if !cfg.startDate.isZero() {
+		found, _ := utils.Search(ctx, df.Series[dateColumn], startDate, startDate.Add(time.Hour*24), utils.SearchOptions{Max: &maxResults})
+		if len(found) == 0 {
+			fmt.Println("Nessun dato alla data specificata")
+			os.Exit(1)
+		}
+		nrows = found[0]
+	}
+
+	lastRow := df.Row(nrows, false, dataframe.SeriesName)
+	secondLastRow := df.Row(nrows-1, false, dataframe.SeriesName)
+
+	return lastRow, secondLastRow
+}
+
 func printSummary(df *dataframe.DataFrame) {
-	nrows := df.NRows()
-	lastRow := df.Row(nrows-1, false, dataframe.SeriesName)
-	secondLastRow := df.Row(nrows-2, false, dataframe.SeriesName)
+	lastRow, secondLastRow := getLast2Days(df)
 	last2days := map[string]interface{}{
 		"today":     lastRow,
 		"yesterday": secondLastRow,
 	}
 
 	tmplStr := `
-Aggiornamento: {{LocaleTimeFmt .today.data}} 		Oggi 			Ieri 	   	  Differenza (%)
+Aggiornamento: {{LocaleTimeFmt .today.data}}             Ultimi              Precedenti 	   	  Differenza (%)
 -------------------------------------------------------------------------------------------------------
 
 Totale casi: 		{{LocaleIntFmt .today.totale_casi}}	{{LocaleIntFmt .yesterday.totale_casi}}	{{sub .today.totale_casi .yesterday.totale_casi}}
@@ -78,9 +101,7 @@ Totale testati: 	{{LocaleIntFmt .today.casi_testati}} 	{{LocaleIntFmt .yesterday
 }
 
 func printPercentages(df *dataframe.DataFrame) {
-	nrows := df.NRows()
-	lastRow := df.Row(nrows-1, false, dataframe.SeriesName)
-	secondLastRow := df.Row(nrows-2, false, dataframe.SeriesName)
+	lastRow, secondLastRow := getLast2Days(df)
 
 	calcPct := func(row map[interface{}]interface{}, field string) float64 {
 		return 100 * float64(lastRow[field].(int64)) / float64(row["totale_casi"].(int64))
