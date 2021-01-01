@@ -14,8 +14,8 @@ import (
 )
 
 func printAvailableRegions(df *dataframe.DataFrame) {
-	var denominazione_regione = df.MustNameToColumn("denominazione_regione")
-	iter := df.Series[denominazione_regione].ValuesIterator()
+	var denominazioneRegione = df.MustNameToColumn("denominazione_regione")
+	iter := df.Series[denominazioneRegione].ValuesIterator()
 	set := make(map[string]bool)
 
 	fmt.Println("\navailable regions:")
@@ -27,13 +27,13 @@ func printAvailableRegions(df *dataframe.DataFrame) {
 		set[vals.(string)] = true
 	}
 
-	for key, _ := range set {
+	for key := range set {
 		fmt.Printf("%v, ", key)
 	}
 	fmt.Println()
 }
 
-func getLast2Days(df *dataframe.DataFrame) (map[interface{}]interface{}, map[interface{}]interface{}) {
+func getLastDays(df *dataframe.DataFrame) (map[interface{}]interface{}, map[interface{}]interface{}, map[interface{}]interface{}) {
 	ctx := context.Background()
 
 	nrows := df.NRows() - 1
@@ -52,32 +52,35 @@ func getLast2Days(df *dataframe.DataFrame) (map[interface{}]interface{}, map[int
 
 	lastRow := df.Row(nrows, false, dataframe.SeriesName)
 	secondLastRow := df.Row(nrows-1, false, dataframe.SeriesName)
+	thirdLastRow := df.Row(nrows-2, false, dataframe.SeriesName)
 
-	return lastRow, secondLastRow
+	return lastRow, secondLastRow, thirdLastRow
 }
 
 func printSummary(df *dataframe.DataFrame) {
-	lastRow, secondLastRow := getLast2Days(df)
+	lastRow, secondLastRow, thirdLastRow := getLastDays(df)
 	last2days := map[string]interface{}{
-		"today":     lastRow,
-		"yesterday": secondLastRow,
+		"today":        lastRow,
+		"yesterday":    secondLastRow,
+		"threeDaysAgo": thirdLastRow,
 	}
 
 	tmplStr := `
 Aggiornamento: {{LocaleTimeFmt .today.data}}             Ultimi              Precedenti 	   	  Differenza (%)
 -------------------------------------------------------------------------------------------------------
 
-Totale casi: 		{{LocaleIntFmt .today.totale_casi}}	{{LocaleIntFmt .yesterday.totale_casi}}	{{sub .today.totale_casi .yesterday.totale_casi}}
-Nuovi casi: 		{{LocaleIntFmt .today.nuovi_positivi}} 	{{LocaleIntFmt .yesterday.nuovi_positivi}}	{{sub .today.nuovi_positivi .yesterday.nuovi_positivi}}
-Totale positivi: 	{{LocaleIntFmt .today.totale_positivi}} 	{{LocaleIntFmt .yesterday.totale_positivi}}	{{sub .today.totale_positivi .yesterday.totale_positivi}}
-Variazione positivi: 	{{ LocaleIntFmt .today.variazione_totale_positivi }} 	{{ LocaleIntFmt .yesterday.variazione_totale_positivi }}	{{sub .today.variazione_totale_positivi .yesterday.variazione_totale_positivi}}
-Totale decessi: 	{{LocaleIntFmt .today.deceduti}} 	{{LocaleIntFmt .yesterday.deceduti}}	{{sub .today.deceduti .yesterday.deceduti}}
-Terapia intensiva: 	{{LocaleIntFmt .today.terapia_intensiva}} 	{{LocaleIntFmt .yesterday.terapia_intensiva}}	{{sub .today.terapia_intensiva .yesterday.terapia_intensiva}}
-Ingressi in intensiva: 	{{LocaleIntFmt .today.ingressi_terapia_intensiva}} 	{{LocaleIntFmt .yesterday.ingressi_terapia_intensiva}}	{{sub .today.ingressi_terapia_intensiva .yesterday.ingressi_terapia_intensiva}}
-Ospedalizzati: 		{{LocaleIntFmt .today.totale_ospedalizzati}} 	{{LocaleIntFmt .yesterday.totale_ospedalizzati}}	{{sub .today.totale_ospedalizzati .yesterday.totale_ospedalizzati}}
-Dimessi: 		{{LocaleIntFmt .today.dimessi_guariti}} 	{{LocaleIntFmt .yesterday.dimessi_guariti}}	{{sub .today.dimessi_guariti .yesterday.dimessi_guariti}}
-Totale tamponi: 	{{LocaleIntFmt .today.tamponi}} 	{{LocaleIntFmt .yesterday.tamponi}}	{{sub .today.tamponi .yesterday.tamponi}}
-Totale testati: 	{{LocaleIntFmt .today.casi_testati}} 	{{LocaleIntFmt .yesterday.casi_testati}}	{{sub .today.casi_testati .yesterday.casi_testati}}
+Totale casi: 		{{LocaleIntFmt .today.totale_casi}}	{{LocaleIntFmt .yesterday.totale_casi}}	{{pctVar .today.totale_casi .yesterday.totale_casi}}
+Nuovi casi: 		{{LocaleIntFmt .today.nuovi_positivi}} 	{{LocaleIntFmt .yesterday.nuovi_positivi}}	{{pctVar .today.nuovi_positivi .yesterday.nuovi_positivi}}
+Totale positivi: 	{{LocaleIntFmt .today.totale_positivi}} 	{{LocaleIntFmt .yesterday.totale_positivi}}	{{pctVar .today.totale_positivi .yesterday.totale_positivi}}
+Variazione positivi: 	{{ LocaleIntFmt .today.variazione_totale_positivi }} 	{{ LocaleIntFmt .yesterday.variazione_totale_positivi }}	{{pctVar .today.variazione_totale_positivi .yesterday.variazione_totale_positivi}}
+Totale decessi: 	{{LocaleIntFmt .today.deceduti}} 	{{LocaleIntFmt .yesterday.deceduti}}	{{pctVar .today.deceduti .yesterday.deceduti}}
+Variazione decessi: 	{{sub .today.deceduti .yesterday.deceduti}} 	{{sub .yesterday.deceduti .threeDaysAgo.deceduti}}
+Terapia intensiva: 	{{LocaleIntFmt .today.terapia_intensiva}} 	{{LocaleIntFmt .yesterday.terapia_intensiva}}	{{pctVar .today.terapia_intensiva .yesterday.terapia_intensiva}}
+Ingressi in intensiva: 	{{LocaleIntFmt .today.ingressi_terapia_intensiva}} 	{{LocaleIntFmt .yesterday.ingressi_terapia_intensiva}}	{{pctVar .today.ingressi_terapia_intensiva .yesterday.ingressi_terapia_intensiva}}
+Ospedalizzati: 		{{LocaleIntFmt .today.totale_ospedalizzati}} 	{{LocaleIntFmt .yesterday.totale_ospedalizzati}}	{{pctVar .today.totale_ospedalizzati .yesterday.totale_ospedalizzati}}
+Dimessi: 		{{LocaleIntFmt .today.dimessi_guariti}} 	{{LocaleIntFmt .yesterday.dimessi_guariti}}	{{pctVar .today.dimessi_guariti .yesterday.dimessi_guariti}}
+Totale tamponi: 	{{LocaleIntFmt .today.tamponi}} 	{{LocaleIntFmt .yesterday.tamponi}}	{{pctVar .today.tamponi .yesterday.tamponi}}
+Totale testati: 	{{LocaleIntFmt .today.casi_testati}} 	{{LocaleIntFmt .yesterday.casi_testati}}	{{pctVar .today.casi_testati .yesterday.casi_testati}}
 `
 	p := message.NewPrinter(language.Italian)
 	tmpl := template.Must(
@@ -89,6 +92,9 @@ Totale testati: 	{{LocaleIntFmt .today.casi_testati}} 	{{LocaleIntFmt .yesterday
 				return val.Format("02/01/2006")
 			},
 			"sub": func(a, b int64) string {
+				return p.Sprintf("%20.0d", a-b)
+			},
+			"pctVar": func(a, b int64) string {
 				variation := a - b
 				pctVariation := float64(a-b) / float64(b) * 100
 				return p.Sprintf("%20.0d", variation) + p.Sprintf(" ( %6.2f%%)", pctVariation)
@@ -101,7 +107,7 @@ Totale testati: 	{{LocaleIntFmt .today.casi_testati}} 	{{LocaleIntFmt .yesterday
 }
 
 func printPercentages(df *dataframe.DataFrame) {
-	lastRow, secondLastRow := getLast2Days(df)
+	lastRow, secondLastRow, _ := getLastDays(df)
 
 	calcPct := func(row map[interface{}]interface{}, field string) float64 {
 		return 100 * float64(lastRow[field].(int64)) / float64(row["totale_casi"].(int64))

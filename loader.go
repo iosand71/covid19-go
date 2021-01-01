@@ -90,3 +90,15 @@ func logDataframe(df *dataframe.DataFrame) {
 	}
 	df.Unlock()
 }
+
+func filterByRegion(df *dataframe.DataFrame, region string) {
+	var ctx = context.Background()
+	filterFn := dataframe.FilterDataFrameFn(
+		func(vals map[interface{}]interface{}, row, nRows int) (dataframe.FilterAction, error) {
+			if vals["denominazione_regione"] != region {
+				return dataframe.DROP, nil
+			}
+			return dataframe.KEEP, nil
+		})
+	dataframe.Filter(ctx, df, filterFn, dataframe.FilterOptions{InPlace: true})
+}
