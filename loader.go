@@ -71,7 +71,7 @@ func convertToTime(in interface{}) (interface{}, error) {
 
 func convertToInt64(in interface{}) (interface{}, error) {
 	if in == nil || in.(string) == "" {
-		return nil, nil
+		return int64(0), nil
 	}
 	return strconv.ParseInt(in.(string), 10, 64)
 }

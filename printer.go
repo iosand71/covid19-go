@@ -57,7 +57,7 @@ func getLastDays(df *dataframe.DataFrame) (map[interface{}]interface{}, map[inte
 	return lastRow, secondLastRow, thirdLastRow
 }
 
-func printSummary(df *dataframe.DataFrame) {
+func printSummary(df *dataframe.DataFrame) error {
 	lastRow, secondLastRow, thirdLastRow := getLastDays(df)
 	last2days := map[string]interface{}{
 		"today":        lastRow,
@@ -116,10 +116,13 @@ Totale testati: 	{{LocaleIntFmt .today.casi_testati}} 	{{LocaleIntFmt .yesterday
 
 	if err := tmpl.Execute(os.Stdout, last2days); err != nil {
 		fmt.Println(err)
+		return err
 	}
+
+	return nil
 }
 
-func printPercentages(df *dataframe.DataFrame) {
+func printPercentages(df *dataframe.DataFrame) error {
 	lastRow, secondLastRow, _ := getLastDays(df)
 
 	calcPct := func(row map[interface{}]interface{}, field string) float64 {
@@ -161,6 +164,8 @@ Guariti: 		{{printf "%19.2f" .today.recovered}}% 	{{printf "%19.2f" .yesterday.r
 
 	if err := tmpl.Execute(os.Stdout, last2days); err != nil {
 		fmt.Println(err)
+		return err
 	}
 
+	return nil
 }
