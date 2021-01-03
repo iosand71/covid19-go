@@ -72,14 +72,15 @@ Aggiornamento: {{LocaleTimeFmt .today.data}}             Ultimi              Pre
 Totale casi: 		{{LocaleIntFmt .today.totale_casi}}	{{LocaleIntFmt .yesterday.totale_casi}}	{{pctVar .today.totale_casi .yesterday.totale_casi}}
 Nuovi casi: 		{{LocaleIntFmt .today.nuovi_positivi}} 	{{LocaleIntFmt .yesterday.nuovi_positivi}}	{{pctVar .today.nuovi_positivi .yesterday.nuovi_positivi}}
 Totale positivi: 	{{LocaleIntFmt .today.totale_positivi}} 	{{LocaleIntFmt .yesterday.totale_positivi}}	{{pctVar .today.totale_positivi .yesterday.totale_positivi}}
-Variazione positivi: 	{{ LocaleIntFmt .today.variazione_totale_positivi }} 	{{ LocaleIntFmt .yesterday.variazione_totale_positivi }}	{{pctVar .today.variazione_totale_positivi .yesterday.variazione_totale_positivi}}
+Positivi per giorno: 	{{ LocaleIntFmt .today.variazione_totale_positivi }} 	{{ LocaleIntFmt .yesterday.variazione_totale_positivi }}	{{pctVar .today.variazione_totale_positivi .yesterday.variazione_totale_positivi}}
 Totale decessi: 	{{LocaleIntFmt .today.deceduti}} 	{{LocaleIntFmt .yesterday.deceduti}}	{{pctVar .today.deceduti .yesterday.deceduti}}
-Variazione decessi: {{with calcDiff .today.deceduti .yesterday.deceduti .threeDaysAgo.deceduti}} 	{{.today}} 	{{.yesterday}} 	{{.variation}}{{.pctVariation}}{{end}}
+Decessi per giorno: {{with calcDiff .today.deceduti .yesterday.deceduti .threeDaysAgo.deceduti}} 	{{.today}} 	{{.yesterday}} 	{{.variation}}{{.pctVariation}}{{end}}
 Terapia intensiva: 	{{LocaleIntFmt .today.terapia_intensiva}} 	{{LocaleIntFmt .yesterday.terapia_intensiva}}	{{pctVar .today.terapia_intensiva .yesterday.terapia_intensiva}}
 Ingressi in intensiva: 	{{LocaleIntFmt .today.ingressi_terapia_intensiva}} 	{{LocaleIntFmt .yesterday.ingressi_terapia_intensiva}}	{{pctVar .today.ingressi_terapia_intensiva .yesterday.ingressi_terapia_intensiva}}
 Ospedalizzati: 		{{LocaleIntFmt .today.totale_ospedalizzati}} 	{{LocaleIntFmt .yesterday.totale_ospedalizzati}}	{{pctVar .today.totale_ospedalizzati .yesterday.totale_ospedalizzati}}
 Dimessi: 		{{LocaleIntFmt .today.dimessi_guariti}} 	{{LocaleIntFmt .yesterday.dimessi_guariti}}	{{pctVar .today.dimessi_guariti .yesterday.dimessi_guariti}}
 Totale tamponi: 	{{LocaleIntFmt .today.tamponi}} 	{{LocaleIntFmt .yesterday.tamponi}}	{{pctVar .today.tamponi .yesterday.tamponi}}
+Tamponi per giorno: {{with calcDiff .today.tamponi .yesterday.tamponi .threeDaysAgo.tamponi}} 	{{.today}} 	{{.yesterday}} 	{{.variation}}{{.pctVariation}}{{end}}
 Totale testati: 	{{LocaleIntFmt .today.casi_testati}} 	{{LocaleIntFmt .yesterday.casi_testati}}	{{pctVar .today.casi_testati .yesterday.casi_testati}}
 `
 	p := message.NewPrinter(language.Italian)
