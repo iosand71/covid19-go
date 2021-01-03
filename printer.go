@@ -74,7 +74,7 @@ Nuovi casi: 		{{LocaleIntFmt .today.nuovi_positivi}} 	{{LocaleIntFmt .yesterday.
 Totale positivi: 	{{LocaleIntFmt .today.totale_positivi}} 	{{LocaleIntFmt .yesterday.totale_positivi}}	{{pctVar .today.totale_positivi .yesterday.totale_positivi}}
 Variazione positivi: 	{{ LocaleIntFmt .today.variazione_totale_positivi }} 	{{ LocaleIntFmt .yesterday.variazione_totale_positivi }}	{{pctVar .today.variazione_totale_positivi .yesterday.variazione_totale_positivi}}
 Totale decessi: 	{{LocaleIntFmt .today.deceduti}} 	{{LocaleIntFmt .yesterday.deceduti}}	{{pctVar .today.deceduti .yesterday.deceduti}}
-Variazione decessi: 	{{sub .today.deceduti .yesterday.deceduti}} 	{{sub .yesterday.deceduti .threeDaysAgo.deceduti}}
+Variazione decessi: {{with calcDiff .today.deceduti .yesterday.deceduti .threeDaysAgo.deceduti}} 	{{.today}} 	{{.yesterday}} 	{{.variation}}{{.pctVariation}}{{end}}
 Terapia intensiva: 	{{LocaleIntFmt .today.terapia_intensiva}} 	{{LocaleIntFmt .yesterday.terapia_intensiva}}	{{pctVar .today.terapia_intensiva .yesterday.terapia_intensiva}}
 Ingressi in intensiva: 	{{LocaleIntFmt .today.ingressi_terapia_intensiva}} 	{{LocaleIntFmt .yesterday.ingressi_terapia_intensiva}}	{{pctVar .today.ingressi_terapia_intensiva .yesterday.ingressi_terapia_intensiva}}
 Ospedalizzati: 		{{LocaleIntFmt .today.totale_ospedalizzati}} 	{{LocaleIntFmt .yesterday.totale_ospedalizzati}}	{{pctVar .today.totale_ospedalizzati .yesterday.totale_ospedalizzati}}
@@ -91,8 +91,20 @@ Totale testati: 	{{LocaleIntFmt .today.casi_testati}} 	{{LocaleIntFmt .yesterday
 			"LocaleTimeFmt": func(val time.Time) string {
 				return val.Format("02/01/2006")
 			},
-			"sub": func(a, b int64) string {
-				return p.Sprintf("%20.0d", a-b)
+			"calcDiff": func(today, yesterday, threeDaysAgo int64) map[string]string {
+				const format = "%20.0d"
+				todayDiff := today - yesterday
+				yesterdayDiff := yesterday - threeDaysAgo
+				variation := todayDiff - yesterdayDiff
+				pctVariation := float64(todayDiff-yesterdayDiff) / float64(yesterdayDiff) * 100
+
+				deaths := map[string]string{
+					"today":        p.Sprintf(format, todayDiff),
+					"yesterday":    p.Sprintf(format, yesterdayDiff),
+					"variation":    p.Sprintf(format, variation),
+					"pctVariation": p.Sprintf(" ( %6.2f%%)", pctVariation),
+				}
+				return deaths
 			},
 			"pctVar": func(a, b int64) string {
 				variation := a - b
