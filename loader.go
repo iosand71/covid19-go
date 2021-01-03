@@ -79,7 +79,8 @@ func convertToInt64(in interface{}) (interface{}, error) {
 func logDataframe(df *dataframe.DataFrame) {
 
 	iterator := df.ValuesIterator(dataframe.ValuesOptions{-10, 1, true})
-	log.Println("Last 10 rows: \n")
+	log.Println("Last 10 rows:")
+	log.Println()
 
 	df.Lock()
 	for {
