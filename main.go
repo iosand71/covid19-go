@@ -56,18 +56,18 @@ const (
 var cfg Config
 
 func main() {
-	// here main
 	log.SetFlags(0)
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(ioutil.Discard) // discard debugging output as default
 
 	app := cli.App("covid19", "Daily stats for covid19 in Italy.")
 
 	app.Version("v version", "covid19 0.0.1")
-	app.Spec = "[-r [-a]] [-d]"
+	app.Spec = "[-r [-a]] [-d] [-V]"
 
 	app.StringOptPtr(&cfg.Region, "r region", "", "Specify a region")
 	app.BoolOptPtr(&cfg.printRegions, "a availables", false, "Print available regions")
 	app.VarOpt("d date", &cfg.startDate, "Date in yyyy-mm-dd format")
+	app.BoolOptPtr(&cfg.debug, "V verbose", false, "Verbose mode (debugging)")
 
 	app.Action = func() {
 		mainAction()
@@ -81,6 +81,10 @@ func mainAction() {
 	fmt.Println()
 
 	var csv string
+	if cfg.debug == true {
+		log.SetOutput(os.Stderr)
+	}
+
 	if cfg.Region != "" {
 		csv = getData(RegionsDataURL)
 		fmt.Printf("regione selezionata: %v\n", cfg.Region)
