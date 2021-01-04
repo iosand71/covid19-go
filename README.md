@@ -19,7 +19,7 @@ due variabili di ambiente, ad ex:
 ## Riga di comando
 
 ```
-Usage: covid19 [-r [-a]] [-d]
+Usage: covid19 [-r [-a]] [-d] [-D]
 
 Daily stats for covid19 in Italy.
 
@@ -28,5 +28,6 @@ Options:
   -r, --region       Specify a region
   -a, --availables   Print available regions
   -d, --date         Date in yyyy-mm-dd format (default 0001-01-01)
+  -D, --debug        Debug mode
 ```
 
