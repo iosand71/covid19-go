@@ -1,6 +1,8 @@
 package main
 
 import (
+	"io/ioutil"
+	"log"
 	"os"
 	"testing"
 	"time"
@@ -17,6 +19,8 @@ var (
 )
 
 func init() {
+	log.SetFlags(0)
+	log.SetOutput(ioutil.Discard) // discard debugging output as default
 	s0 = dataframe.NewSeriesTime("data", nil,
 		time.Date(2020, time.December, 23, 0, 0, 0, 0, time.UTC),
 		time.Date(2020, time.December, 24, 0, 0, 0, 0, time.UTC),
