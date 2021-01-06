@@ -90,3 +90,10 @@ func TestPreviousDate(t *testing.T) {
 	TestPrintSummary(t)
 	TestPrintPercentages(t)
 }
+
+func TestPrintAvailableRegions(t *testing.T) {
+	df := loadDataFrame(regionalData)
+	disableStdout()
+	printAvailableRegions(df)
+	enableStdout()
+}
